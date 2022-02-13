@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30204.135
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32126.317
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModTemplate", "ModTemplate\ModTemplate.csproj", "{8A39F9E7-1A89-430C-9C3E-BDFB3B7E17DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArchipelagoOuterWildsMod", "ArchipelagoOuterWildsMod.csproj", "{8A39F9E7-1A89-430C-9C3E-BDFB3B7E17DF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,6 +20,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {3C8C943F-F2D5-4733-9CD6-9DD77B9FA9A1}
+		SolutionGuid = {9B796FAD-98C5-4CC3-9905-F5ACBE92003D}
 	EndGlobalSection
 EndGlobal
