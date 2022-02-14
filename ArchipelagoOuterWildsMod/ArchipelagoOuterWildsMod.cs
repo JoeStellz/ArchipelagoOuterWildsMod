@@ -1,5 +1,6 @@
-﻿using OWML.ModHelper;
-using OWML.Common;
+﻿using OWML.Common;
+using OWML.Common.Menus;
+using OWML.ModHelper;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -10,96 +11,81 @@ namespace ArchipelagoOuterWildsMod
         internal static ArchipelagoOuterWildsMod Instance;
 
         private System.Random rnd;
+        private readonly int Seed = 1981184590;
+        private bool Testing;
 
         private void Start()
         {
-            Instance = this;
-
-            // ModHelper.HarmonyHelper.AddPostfix<ShipLogManager>("AddEntry", typeof(Patches), "AddEntry");
-            // ModHelper.HarmonyHelper.AddPostfix<ShipLogManager>("RevealFact", typeof(Patches), "RevealFact");
-            // ModHelper.HarmonyHelper.AddPrefix<GameSave>("SetPersistentCondition", typeof(Patches), "SetPersistentCondition");
-
             ModHelper.Console.WriteLine($"Running {nameof(ArchipelagoOuterWildsMod)}!", MessageType.Success);
 
-            var seed = new System.Random().Next();
+            Instance = this;
 
-            LoadManager.OnCompleteSceneLoad += (scene, loadScene) =>
-            {
-                ModHelper.Console.WriteLine($"Loaded scene {loadScene}!", MessageType.Success);
-                switch (loadScene)
-                {
-                    case OWScene.SolarSystem:
-                        // seed = new System.Random().Next();
-                        ModHelper.Console.WriteLine($"Using seed {seed}", MessageType.Info);
-                        StartSolarSystem(seed);
-                        // TestSolarSystem();
-                        break;
-                    default:
-                        return;
-                }
-            };
+            // Subscribed events
+            // ModHelper.Menus.MainMenu.OnInit += OnMainMenuInit;
+            LoadManager.OnCompleteSceneLoad += OnCompleteSceneLoad;
+
+            // Patched methods
+            // ModHelper.HarmonyHelper.AddPrefix<PopupMenu>("SetUpPopup", typeof(Patches), nameof(Patches.SetUpPopup));
+
+            Testing = false;
         }
 
-        private void StartSolarSystem(int seed)
+        private void OnCompleteSceneLoad(OWScene origScene, OWScene loadScene)
         {
-            rnd = new System.Random(seed);
+            if (loadScene == OWScene.SolarSystem)
+            {
+                if (Testing) OnCompleteSolarSystemLoadTest();
+                else OnCompleteSolarSystemLoad();
+            }
+            else return;
+        }
+
+        private void OnCompleteSolarSystemLoad()
+        {
+            rnd = new System.Random(Seed);
 
             bool rndPlanets = true;
 
-            var planetNames = new List<string>()
+            if (!rndPlanets) return;
+
+            var bodNames = new List<string>()
             {
                 "BrittleHollow_Body",
                 "DarkBramble_Body",
+                "SunStation_Body",
                 "FocalBody",
+                "WhiteHole_Body",
                 "TimberHearth_Body",
                 "GiantsDeep_Body"
             };
 
-            var otherNames = new List<string>()
-            {
-                "SunStation_Body",
-                "WhiteHole_Body"
-            };
-
             var origPositions = new Dictionary<string, Vector3>();
-            var newPosMags = new List<float>();
+            var newMags = new List<float>();
             var offsets = new Dictionary<string, Vector3>();
 
             foreach (var obj in FindObjectsOfType<AstroObject>())
             {
                 var name = obj.name;
-                if (!planetNames.Contains(name) && !otherNames.Contains(name)) continue;
+                if (!bodNames.Contains(name)) continue;
                 var pos = obj.transform.position;
                 origPositions.Add(name, pos);
                 Vector3 newPos;
-                if (rndPlanets)
+                newPos = new Vector3((float)rnd.NextDouble(), (float)rnd.NextDouble(), (float)rnd.NextDouble());
+                if (name == "BrittleHollow_Body" || name == "WhiteHole_Body") newPos.y = 0;
+                newPos.Normalize();
+                float newMag;
+                bool done = true;
+                do
                 {
-                    newPos = new Vector3((float)rnd.NextDouble(), (float)rnd.NextDouble(), (float)rnd.NextDouble());
-                    if (name == "BrittleHollow_Body" || name == "WhiteHole_Body") newPos.y = 0;
-                    newPos.Normalize();
-                    // ModHelper.Console.WriteLine($"Normalized position vector generated for {name}!", MessageType.Success);
-                    bool done;
-                    // ModHelper.Console.WriteLine($"Now generating position magnitude for {name}", MessageType.Info);
-                    do
+                    newMag = (float)rnd.NextDouble() * 21000f + 5000f;
+                    foreach (var val in newMags)
                     {
-                        var newMag = (float)rnd.NextDouble() * 21000f + 5000f;
-                        done = true;
-                        foreach (var val in newPosMags)
-                        {
-                            if (Mathf.Abs(newMag - val) < 2000f)
-                            {
-                                done = false;
-                                // ModHelper.Console.WriteLine($"{name} position magnitude invalid, trying again", MessageType.Warning);
-                                break;
-                            }
-                        }
-                        if (!done) continue;
-                        newPosMags.Add(newMag);
-                        newPos *= newMag;
-                    } while (!done);
-                    // ModHelper.Console.WriteLine($"{name} position randomized!", MessageType.Success);
-                }
-                else newPos = pos;
+                        done = Mathf.Abs(newMag - val) > 2000f;
+                        if (!done) break;
+                    }
+                } while (!done);
+                newMags.Add(newMag);
+                newPos *= newMag;
                 var offset = newPos - pos;
                 offsets.Add(name, offset);
             }
@@ -118,7 +104,6 @@ namespace ArchipelagoOuterWildsMod
                 {
                     obj.SetPosition(obj.GetPosition() + offset);
                     Physics.SyncTransforms();
-                    // ModHelper.Console.WriteLine($"Adjusted {obj.name} position!", MessageType.Success);
                 }
             }
         }
@@ -130,7 +115,7 @@ namespace ArchipelagoOuterWildsMod
             return GetParent(parent);
         }
 
-        private void TestSolarSystem()
+        private void OnCompleteSolarSystemLoadTest()
         {
             var nomCoordInt = FindObjectOfType<NomaiCoordinateInterface>();
             if (nomCoordInt == null) return;
