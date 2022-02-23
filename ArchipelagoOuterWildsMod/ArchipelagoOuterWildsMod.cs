@@ -235,6 +235,8 @@ namespace ArchipelagoOuterWildsMod
                 newPos *= newMag;
                 var offset = newPos - pos;
                 offsets.Add(name, offset);
+
+                obj.transform.rotation.eulerAngles.Set((float)rnd.NextDouble(), (float)rnd.NextDouble(), (float)rnd.NextDouble());
             }
 
             offsets.Add("OrbitalProbeCannon_Body", offsets["GiantsDeep_Body"]);
