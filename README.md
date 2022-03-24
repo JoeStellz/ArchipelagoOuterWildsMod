@@ -1,6 +1,6 @@
-# Outer Wilds Mod Template
+# Archipelago Outer Wilds Mod
 
-Use this project as a base for new Outer Wilds mods.
+An Outer Wilds mod for ([Archipelago](https://archipelago.gg)).
 
 <!-- TOC -->
 
@@ -28,10 +28,7 @@ Use this project as a base for new Outer Wilds mods.
 
 ## Prerequisites
 
-- An IDE that supports .NET, like Visual Studio ([download Visual Studio Community here](http://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community));
-- Outer Wilds Mod Manager (get it from the [Outer Wilds Mods](https://outerwildsmods.com/) website);
-- OWML installed in the Mod Manager;
-- A GitHub account (required for forking the repo and for releasing your mod to the public);
+- ([Latest release of Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases/latest))
 
 ## How to use this template
 

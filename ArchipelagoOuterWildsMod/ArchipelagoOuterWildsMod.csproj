@@ -3,9 +3,9 @@
     <ProjectGuid>{8A39F9E7-1A89-430C-9C3E-BDFB3B7E17DF}</ProjectGuid>
     <TargetFramework>net48</TargetFramework>
     <OutputPath>Build</OutputPath>
-    <AssemblyTitle>ModTemplate</AssemblyTitle>
-    <Product>ModTemplate</Product>
-    <Copyright>Copyright ©  2020</Copyright>
+    <AssemblyTitle>ArchipelagoOuterWildsMod</AssemblyTitle>
+    <Product>ArchipelagoOuterWildsMod</Product>
+    <Copyright>Copyright ©  2022</Copyright>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
@@ -29,5 +29,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="ArchipelagoOuterWildsMod.csproj.user" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Archipelago.MultiClient.Net\Archipelago.MultiClient.Net\Archipelago.MultiClient.Net.csproj" />
   </ItemGroup>
 </Project>
