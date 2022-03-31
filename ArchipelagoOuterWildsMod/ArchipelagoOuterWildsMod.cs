@@ -4,6 +4,7 @@ using OWML.Common;
 using OWML.ModHelper;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,7 +15,7 @@ namespace ArchipelagoOuterWildsMod
         private static ArchipelagoOuterWildsMod Instance;
         private System.Random RND;
         private static int Seed;// = 1981184590;
-        private readonly bool Testing = true;
+        private readonly bool Testing = false;
         private static readonly StandaloneProfileManager ProfMan = StandaloneProfileManager.SharedInstance;
         private TitleAnimationController TitleAnimCon;
         private TitleScreenManager TitleScreenMan;
@@ -120,7 +121,7 @@ namespace ArchipelagoOuterWildsMod
 
         private void OnStartupPopupConfirm()
         {
-            if (Login == null)
+            if (Login != null)
             {
                 OnPopupsComplete();
                 return;
@@ -346,24 +347,18 @@ namespace ArchipelagoOuterWildsMod
             if (nomCoordInt == null) return;
             ModHelper.Console.WriteLine("Found Nomai coordinate interface!", MessageType.Success);
 
-            ModHelper.Console.WriteLine("Original Coordinate X", MessageType.Info);
-            foreach (var coord in nomCoordInt._coordinateX) ModHelper.Console.WriteLine(coord.ToString(), MessageType.Message);
-            ModHelper.Console.WriteLine("Original Coordinate Y", MessageType.Info);
-            foreach (var coord in nomCoordInt._coordinateY) ModHelper.Console.WriteLine(coord.ToString(), MessageType.Message);
-            ModHelper.Console.WriteLine("Original Coordinate Z", MessageType.Info);
-            foreach (var coord in nomCoordInt._coordinateZ) ModHelper.Console.WriteLine(coord.ToString(), MessageType.Message);
-
-            ModHelper.Console.WriteLine($"New Coordinate X", MessageType.Info);
             RandomizeEyeCoord(ref nomCoordInt._coordinateX);
-            ModHelper.Console.WriteLine($"New Coordinate Y", MessageType.Info);
             RandomizeEyeCoord(ref nomCoordInt._coordinateY);
-            ModHelper.Console.WriteLine($"New Coordinate Z", MessageType.Info);
             RandomizeEyeCoord(ref nomCoordInt._coordinateZ);
+
+            DrawEyeCoordMeshes();
         }
 
         private void RandomizeEyeCoord(ref int[] coord)
         {
-            coord = new int[RND.Next(5) + 2];
+            coord = new int[RND.Next(4) + 3];
+
+            for (var i = 0; i < coord.Length; i++) coord[i] = -1;
 
             for (var i = 0; i < coord.Length; i++)
             {
@@ -383,6 +378,311 @@ namespace ArchipelagoOuterWildsMod
                 coord[i] = newCoord;
                 ModHelper.Console.WriteLine($"{newCoord}", MessageType.Message);
             }
+        }
+
+        private void DrawEyeCoordMeshes()
+        {
+            var orbCanHoloProj = FindObjectOfType<OrbitalCannonHologramProjector>();
+            GameObject eyeCoords = (
+                from hologram in orbCanHoloProj._holograms
+                where hologram.name == "Hologram_EyeCoordinates"
+                select hologram
+            ).FirstOrDefault();
+
+            var eyeCoordsMesh = new Mesh();
+            eyeCoords.GetComponentInChildren<MeshFilter>().mesh = eyeCoordsMesh;
+            var nomCoordInt = FindObjectOfType<NomaiCoordinateInterface>();
+            int[] coordX = nomCoordInt._coordinateX, coordY = nomCoordInt._coordinateY, coordZ = nomCoordInt._coordinateZ;
+
+            List<Vector3> verts = new List<Vector3>(), norms = new List<Vector3>();
+            List<int> tris = new List<int>();
+
+            var pos = Vector3.right * (1 - 1f / 4);
+            DrawEyeCoordMesh(pos, coordX, ref verts, ref norms, ref tris);
+
+            pos = Vector3.zero;
+            DrawEyeCoordMesh(pos, coordY, ref verts, ref norms, ref tris);
+
+            pos = Vector3.right * (1f / 4 - 1);
+            DrawEyeCoordMesh(pos, coordZ, ref verts, ref norms, ref tris);
+
+            eyeCoordsMesh.SetVertices(verts);
+            eyeCoordsMesh.SetNormals(norms);
+            eyeCoordsMesh.SetTriangles(tris, 0);
+        }
+
+        private void DrawEyeCoordMesh(Vector3 pos, int[] coord, ref List<Vector3> verts, ref List<Vector3> norms, ref List<int> tris)
+        {
+            for (var i = 0; i < coord.Length - 1; i++)
+            {
+                var curPosAngle = (5 - coord[i]) * Math.PI / 3;
+                var curPos = new Vector3((float)Math.Cos(curPosAngle), 0, (float)Math.Sin(curPosAngle)) / 4 + pos;
+
+                var nextPosAngle = (5 - coord[i + 1]) * Math.PI / 3;
+                var nextPos = new Vector3((float)Math.Cos(nextPosAngle), 0, (float)Math.Sin(nextPosAngle)) / 4 + pos;
+
+                var faceAngle = Math.Atan2(nextPos.z - curPos.z, nextPos.x - curPos.x) + Math.PI;
+                var faceAngleCos = (float)Math.Cos(faceAngle);
+                var faceAngleSin = (float)Math.Sin(faceAngle);
+                var faceAngleVector = new Vector3(faceAngleCos, 0, faceAngleSin);
+
+                var faceAngleFlip = faceAngle - Math.PI;
+                var faceAngleFlipCos = (float)Math.Cos(faceAngleFlip);
+                var faceAngleFlipSin = (float)Math.Sin(faceAngleFlip);
+                var faceAngleFlipVector = new Vector3(faceAngleFlipCos, 0, faceAngleFlipSin);
+
+                var vertAngle = faceAngle - Math.PI / 2;
+                var vertAngleCos = (float)Math.Cos(vertAngle);
+                var vertAngleSin = (float)Math.Sin(vertAngle);
+                var vertAngleVector = new Vector3(vertAngleCos, 0, vertAngleSin);
+                var vertAngleVectorInset = new Vector3(vertAngleCos, 0.5f, vertAngleSin);
+
+                var vertAngleFlip = vertAngle + Math.PI;
+                var vertAngleFlipCos = (float)Math.Cos(vertAngleFlip);
+                var vertAngleFlipSin = (float)Math.Sin(vertAngleFlip);
+                var vertAngleFlipVector = new Vector3(vertAngleFlipCos, 0, vertAngleFlipSin);
+                var vertAngleFlipVectorInset = new Vector3(vertAngleFlipCos, 0.5f, vertAngleFlipSin);
+
+                Vector3[] newVerts =
+                {
+                    vertAngleVector / 32 + curPos,
+                    vertAngleFlipVector / 32 + curPos,
+                    vertAngleFlipVectorInset / 32 + curPos,
+                    vertAngleVectorInset / 32 + curPos,
+                    vertAngleVector / 32 + nextPos,
+                    vertAngleVectorInset / 32 + nextPos,
+                    vertAngleFlipVectorInset / 32 + nextPos,
+                    vertAngleFlipVector / 32 + nextPos
+                };
+
+                var triStart = verts.Count;
+
+                // back cap
+
+                if (i == 0)
+                {
+                    verts.Add(newVerts[0]);
+                    verts.Add(newVerts[3]);
+                    verts.Add(newVerts[2]);
+                    verts.Add(newVerts[1]);
+
+                    for (int j = 0; j < 4; j++) norms.Add(faceAngleVector);
+
+                    tris.AddRange(MakePlane(triStart));
+                    triStart = verts.Count;
+                }
+
+                // out
+
+                verts.Add(newVerts[0]);
+                verts.Add(newVerts[1]);
+                verts.Add(newVerts[7]);
+                verts.Add(newVerts[4]);
+
+                for (int j = 0; j < 4; j++) norms.Add(Vector3.down);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // in
+
+                verts.Add(newVerts[3]);
+                verts.Add(newVerts[5]);
+                verts.Add(newVerts[6]);
+                verts.Add(newVerts[2]);
+
+                for (int j = 0; j < 4; j++) norms.Add(Vector3.up);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // left
+
+                verts.Add(newVerts[0]);
+                verts.Add(newVerts[4]);
+                verts.Add(newVerts[5]);
+                verts.Add(newVerts[3]);
+
+                for (int j = 0; j < 4; j++) norms.Add(vertAngleVector);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // right
+
+                verts.Add(newVerts[1]);
+                verts.Add(newVerts[2]);
+                verts.Add(newVerts[6]);
+                verts.Add(newVerts[7]);
+
+                for (int j = 0; j < 4; j++) norms.Add(vertAngleFlipVector);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                if (i == 0) continue;
+
+                // front cap
+
+                if (i == coord.Length - 2)
+                {
+                    verts.Add(newVerts[4]);
+                    verts.Add(newVerts[7]);
+                    verts.Add(newVerts[6]);
+                    verts.Add(newVerts[5]);
+
+                    for (int j = 0; j < 4; j++) norms.Add(faceAngleFlipVector);
+
+                    tris.AddRange(MakePlane(triStart));
+                    triStart = verts.Count;
+                }
+
+                var prevPosAngle = (5 - coord[i - 1]) * Math.PI / 3;
+                var prevPos = new Vector3((float)Math.Cos(prevPosAngle), 0, (float)Math.Sin(prevPosAngle)) / 4 + pos;
+
+                var prevVertAngle = Math.Atan2(curPos.z - prevPos.z, curPos.x - prevPos.x) + Math.PI / 2;
+                var prevVertAngleCos = (float)Math.Cos(prevVertAngle);
+                var prevVertAngleSin = (float)Math.Sin(prevVertAngle);
+                var prevVertAngleVector = new Vector3(prevVertAngleCos, 0, prevVertAngleSin);
+                var prevVertAngleVectorInset = new Vector3(prevVertAngleCos, 0.5f, prevVertAngleSin);
+
+                var prevVertAngleFlip = prevVertAngle + Math.PI;
+                var prevVertAngleFlipCos = (float)Math.Cos(prevVertAngleFlip);
+                var prevVertAngleFlipSin = (float)Math.Sin(prevVertAngleFlip);
+                var prevVertAngleFlipVector = new Vector3(prevVertAngleFlipCos, 0, prevVertAngleFlipSin);
+                var prevVertAngleFlipVectorInset = new Vector3(prevVertAngleFlipCos, 0.5f, prevVertAngleFlipSin);
+
+                Vector3[] prevVerts =
+                {
+                    prevVertAngleVector / 32 + curPos,
+                    prevVertAngleFlipVector / 32 + curPos,
+                    prevVertAngleFlipVectorInset / 32 + curPos,
+                    prevVertAngleVectorInset / 32 + curPos
+                };
+
+                // out cap
+
+                verts.Add(prevVerts[0]);
+                verts.Add(prevVerts[1]);
+                verts.Add(newVerts[1]);
+                verts.Add(newVerts[0]);
+
+                for (int j = 0; j < 4; j++) norms.Add(Vector3.down);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // in cap
+
+                verts.Add(prevVerts[2]);
+                verts.Add(prevVerts[3]);
+                verts.Add(newVerts[3]);
+                verts.Add(newVerts[2]);
+
+                for (int j = 0; j < 4; j++) norms.Add(Vector3.up);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // left cap
+
+                verts.Add(prevVerts[3]);
+                verts.Add(prevVerts[0]);
+                verts.Add(newVerts[0]);
+                verts.Add(newVerts[3]);
+
+                var leftAngle = (prevVertAngle + vertAngle) / 2;
+                var leftAngleCos = (float)Math.Cos(leftAngle);
+                var leftAngleSin = (float)Math.Sin(leftAngle);
+                var leftAngleVector = new Vector3(leftAngleCos, 0, leftAngleSin);
+
+                for (int j = 0; j < 4; j++) norms.Add(leftAngleVector);
+
+                tris.AddRange(MakePlane(triStart));
+                triStart = verts.Count;
+
+                // right cap
+
+                verts.Add(prevVerts[1]);
+                verts.Add(prevVerts[2]);
+                verts.Add(newVerts[2]);
+                verts.Add(newVerts[1]);
+
+                var rightAngle = leftAngle + Math.PI;
+                var rightAngleCos = (float)Math.Cos(rightAngle);
+                var rightAngleSin = (float)Math.Sin(rightAngle);
+                var rightAngleVector = new Vector3(rightAngleCos, 0, rightAngleSin);
+
+                for (int j = 0; j < 4; j++) norms.Add(rightAngleVector);
+
+                tris.AddRange(MakePlane(triStart));
+            }
+
+            /*
+            for (var i = 1; i < coord.Length - 1; i++)
+            {
+                var prevPosAngle = (5 - coord[i - 1]) * Math.PI / 3;
+                var prevPos = new Vector3((float)Math.Cos(prevPosAngle), 0, (float)Math.Sin(prevPosAngle)) / 4 + pos;
+                var posAngle = (5 - coord[i]) * Math.PI / 3;
+                var curPos = new Vector3((float)Math.Cos(posAngle), 0, (float)Math.Sin(posAngle)) / 4 + pos;
+                var nextPosAngle = (5 - coord[i + 1]) * Math.PI / 3;
+                var nextPos = new Vector3((float)Math.Cos(nextPosAngle), 0, (float)Math.Sin(nextPosAngle)) / 4 + pos;
+                double prevAngle = Math.Atan2(curPos.z - prevPos.z, curPos.x - prevPos.x) + Math.PI / 2;
+                double nextAngle = Math.Atan2(nextPos.z - curPos.z, nextPos.x - curPos.x) + Math.PI / 2;
+
+                Vector3[] newVerts =
+                {
+                    new Vector3((float)Math.Cos(prevAngle), 0, (float)Math.Sin(prevAngle)) / 32 + prevPos,
+                    new Vector3((float)Math.Cos(prevAngle), 0.5f, (float)Math.Sin(prevAngle)) / 32 + prevPos,
+                    new Vector3((float)Math.Cos(prevAngle + Math.PI), 0, (float)Math.Sin(prevAngle + Math.PI)) / 32 + prevPos,
+                    new Vector3((float)Math.Cos(prevAngle + Math.PI), 0.5f, (float)Math.Sin(prevAngle + Math.PI)) / 32 + prevPos,
+                    new Vector3((float)Math.Cos(prevAngle), 0, (float)Math.Sin(prevAngle)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(prevAngle), 0.5f, (float)Math.Sin(prevAngle)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(prevAngle + Math.PI), 0, (float)Math.Sin(prevAngle + Math.PI)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(prevAngle + Math.PI), 0.5f, (float)Math.Sin(prevAngle + Math.PI)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(nextAngle), 0, (float)Math.Sin(nextAngle)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(nextAngle), 0.5f, (float)Math.Sin(nextAngle)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(nextAngle + Math.PI), 0, (float)Math.Sin(nextAngle + Math.PI)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(nextAngle + Math.PI), 0.5f, (float)Math.Sin(nextAngle + Math.PI)) / 32 + curPos,
+                    new Vector3((float)Math.Cos(nextAngle), 0, (float)Math.Sin(nextAngle)) / 32 + nextPos,
+                    new Vector3((float)Math.Cos(nextAngle), 0.5f, (float)Math.Sin(nextAngle)) / 32 + nextPos,
+                    new Vector3((float)Math.Cos(nextAngle + Math.PI), 0, (float)Math.Sin(nextAngle + Math.PI)) / 32 + nextPos,
+                    new Vector3((float)Math.Cos(nextAngle + Math.PI), 0.5f, (float)Math.Sin(nextAngle + Math.PI)) / 32 + nextPos
+                };
+
+                var triStart = verts.Count;
+                verts.AddRange(newVerts);
+
+                int[] newTris =
+                {
+                    triStart, triStart + 2, triStart + 1, triStart + 1, triStart + 2, triStart + 3,
+                    triStart, triStart + 4, triStart + 2, triStart + 2, triStart + 4, triStart + 6,
+                    triStart + 1, triStart + 3, triStart + 5, triStart + 3, triStart + 7, triStart + 5,
+                    triStart, triStart + 1, triStart + 4, triStart + 1, triStart + 5, triStart + 4,
+                    triStart + 2, triStart + 6, triStart + 3, triStart + 3, triStart + 6, triStart + 7,
+                    triStart + 4, triStart + 6, triStart + 8, triStart + 4, triStart + 10, triStart + 6,
+                    triStart + 5, triStart + 7, triStart + 11, triStart + 5, triStart + 9, triStart + 7,
+                    triStart + 4, triStart + 8, triStart + 5, triStart + 5, triStart + 8, triStart + 9,
+                    triStart + 6, triStart + 10, triStart + 7, triStart + 7, triStart + 10, triStart + 11,
+                    triStart + 8, triStart + 12, triStart + 10, triStart + 10, triStart + 12, triStart + 14,
+                    triStart + 9, triStart + 11, triStart + 13, triStart + 11, triStart + 15, triStart + 13,
+                    triStart + 8, triStart + 9, triStart + 12, triStart + 9, triStart + 13, triStart + 12,
+                    triStart + 10, triStart + 14, triStart + 11, triStart + 11, triStart + 14, triStart + 15,
+                    triStart + 12, triStart + 13, triStart + 14, triStart + 13, triStart + 15, triStart +  14
+                };
+
+                tris.AddRange(newTris);
+            }
+            */
+        }
+
+        private int[] MakePlane(int triStart)
+        {
+            return new int[]
+            {
+                triStart, triStart + 1, triStart + 2,
+                triStart, triStart + 2, triStart + 3
+            };
         }
 
         private void RandomizePlanets()
@@ -475,60 +775,7 @@ namespace ArchipelagoOuterWildsMod
 
         private void OnCompleteSolarSystemLoadTest()
         {
-            var orbCanHoloProj = FindObjectOfType<OrbitalCannonHologramProjector>();
-            GameObject eyeCoords = null;
-
-            foreach (var obj in orbCanHoloProj._holograms)
-            {
-                if (obj.name == "Hologram_EyeCoordinates") eyeCoords = obj;
-            }
-
-            var eyeCoordsMesh = new Mesh();
-            eyeCoords.GetComponentInChildren<MeshFilter>().mesh = eyeCoordsMesh;
-            var nomCoordInt = FindObjectOfType<NomaiCoordinateInterface>();
-            int[] coordX = nomCoordInt._coordinateX, coordY = nomCoordInt._coordinateY, coordZ = nomCoordInt._coordinateZ;
-            List<Vector3> verts = new List<Vector3>();
-            List<int> tris = new List<int>();
-            var pos = Vector3.right * (1 - 1f / 4);
-            DrawEyeCoordMesh(pos, coordX, ref verts, ref tris);
-            pos = Vector3.zero;
-            DrawEyeCoordMesh(pos, coordY, ref verts, ref tris);
-            pos = Vector3.right * (1f / 4 - 1);
-            DrawEyeCoordMesh(pos, coordZ, ref verts, ref tris);
-            eyeCoordsMesh.SetVertices(verts);
-            eyeCoordsMesh.SetTriangles(tris, 0);
-        }
-
-        private void DrawEyeCoordMesh(Vector3 pos, int[] coord, ref List<Vector3> verts, ref List<int> tris)
-        {
-            for (var i = 0; i < coord.Length - 1; i++)
-            {
-                var posAngle = (5 - coord[i]) * Math.PI / 3;
-                var curPos = new Vector3((float)Math.Cos(posAngle), 0, (float)Math.Sin(posAngle)) / 4 + pos;
-                var nextPosAngle = (5 - coord[i + 1]) * Math.PI / 3;
-                var nextPos = new Vector3((float)Math.Cos(nextPosAngle), 0, (float)Math.Sin(nextPosAngle)) / 4 + pos;
-                double lookAngle;
-                lookAngle = Math.Atan2(nextPos.z - curPos.z, nextPos.x - curPos.x) + Math.PI / 2;
-
-                Vector3[] newVerts =
-                {
-                    new Vector3((float)Math.Cos(lookAngle), 0, (float)Math.Sin(lookAngle)) / 32 + curPos,
-                    new Vector3((float)Math.Cos(lookAngle), 0, (float)Math.Sin(lookAngle)) / 32 + nextPos,
-                    new Vector3((float)Math.Cos(lookAngle + Math.PI), 0, (float)Math.Sin(lookAngle + Math.PI)) / 32 + curPos,
-                    new Vector3((float)Math.Cos(lookAngle + Math.PI), 0, (float)Math.Sin(lookAngle + Math.PI)) / 32 + nextPos
-                };
-
-                var triStart = verts.Count;
-                verts.AddRange(newVerts);
-
-                int[] newTris =
-                {
-                    triStart, triStart + 1, triStart + 2,
-                    triStart + 1, triStart + 3, triStart + 2
-                };
-
-                tris.AddRange(newTris);
-            }
+            DrawEyeCoordMeshes();
         }
     }
 }
